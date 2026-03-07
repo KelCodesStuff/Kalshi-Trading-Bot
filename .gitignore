@@ -1,0 +1,29 @@
+# Kalshi Private Keys
+*.pem
+kalshi_private_key*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+.venv/
+venv/
+ENV/
+
+# IDEs
+.idea/
+.vscode/
