@@ -1,11 +1,7 @@
 import asyncio
-import sys
 import logging
-from pathlib import Path
 
 # Provide required imports from our new module
-project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root))
 
 from data.websocket_client import KalshiWebsocketClient
 from data.orderbook_manager import OrderbookManager

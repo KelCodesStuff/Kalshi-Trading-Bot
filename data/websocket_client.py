@@ -6,12 +6,7 @@ import ssl
 import certifi
 from typing import Callable, Awaitable, Dict, Any
 
-import sys
-from pathlib import Path
 
-# Add project root to sys.path
-project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root))
 
 from config import ENVIRONMENT
 from auth.kalshi_auth import get_auth_headers

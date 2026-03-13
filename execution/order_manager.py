@@ -1,11 +1,3 @@
-import sys
-from pathlib import Path
-
-# Add project root to sys.path directly
-root = str(Path(__file__).resolve().parent.parent)
-if root not in sys.path:
-    sys.path.insert(0, root)
-
 from config import BASE_URL
 from auth.kalshi_auth import get_auth_headers
 
@@ -282,6 +274,18 @@ class OrderManager:
             logger.error(f"DELETE Request Exception: {e}")
             return None
 
+    async def _cancel_by_kalshi_id(self, order_id: str, client_order_id: Optional[str]):
+        """Helper method to cancel an order directly by Kalshi order ID (used during recovery)."""
+        cancel_path = f"/trade-api/v2/portfolio/orders/{order_id}"
+        resp = await asyncio.to_thread(self._delete_request, cancel_path)
+        if resp and resp.status_code in [200, 204]:
+            logger.info(f"Successfully cancelled orphaned order {cancel_path}")
+            if client_order_id:
+                self._update_db_order_status(client_order_id, "cancelled", kalshi_order_id=order_id)
+        else:
+            err = resp.text if resp else "No response"
+            logger.error(f"Failed to cancel orphaned order {cancel_path}: {err}")
+
     def get_tracked_active_orders(self, ticker: str = None) -> List[Dict[str, Any]]:
         """Return list of active orders we are currently tracking, optionally filtered by ticker."""
         orders = []
@@ -331,20 +335,7 @@ class OrderManager:
                     logger.info(f"Preparing to cancel orphaned order: {order_id} (Client ID: {client_order_id})")
                     
                     # We can use the REST API directly to cancel by Kalshi order_id to be safe
-                    cancel_path = f"/trade-api/v2/portfolio/orders/{order_id}"
-                    
-                    # Create a quick async wrapper for the deletion
-                    async def _do_cancel(p, cid):
-                        resp = await asyncio.to_thread(self._delete_request, p)
-                        if resp and resp.status_code in [200, 204]:
-                            logger.info(f"Successfully cancelled orphaned order {p}")
-                            if cid:
-                                self._update_db_order_status(cid, "cancelled", kalshi_order_id=order_id)
-                        else:
-                            err = resp.text if resp else "No response"
-                            logger.error(f"Failed to cancel orphaned order {p}: {err}")
-                            
-                    cancel_tasks.append(_do_cancel(cancel_path, client_order_id))
+                    cancel_tasks.append(self._cancel_by_kalshi_id(order_id, client_order_id))
                     
                 if cancel_tasks:
                     logger.info(f"Executing {len(cancel_tasks)} cancellation tasks...")
