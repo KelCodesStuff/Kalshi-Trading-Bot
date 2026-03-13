@@ -25,7 +25,7 @@ default_key_filename = "kalshi_private_key_prod.pem" if ENVIRONMENT == "prod" el
 PRIVATE_KEY_PATH = Path(os.getenv("KALSHI_PRIVATE_KEY_PATH", PROJECT_ROOT / default_key_filename))
 
 # Alerting
-ALERT_WEBHOOK_URL = os.getenv("ALERT_WEBHOOK_URL", "*SLACK_REDACTED*")
+ALERT_WEBHOOK_URL = os.getenv("ALERT_WEBHOOK_URL")
 
 # Strategy Tuning Parameters
 # Default: Gamma 0.5 (Risk Aversion), 4 cent minimum spread, 1 contract order size
