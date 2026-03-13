@@ -1,12 +1,5 @@
 import asyncio
-import sys
 import os
-from pathlib import Path
-
-# Add project root to sys.path directly
-root = str(Path(__file__).resolve().parent.parent)
-if root not in sys.path:
-    sys.path.insert(0, root)
 
 from execution.order_manager import OrderManager
 

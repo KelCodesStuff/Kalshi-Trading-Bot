@@ -8,6 +8,9 @@ from data.websocket_client import KalshiWebsocketClient
 from data.orderbook_manager import OrderbookManager
 from data.inventory_manager import InventoryManager
 from execution.order_manager import OrderManager
+from utils.alerting import send_alert
+from utils.metrics import start_metrics_server, BOT_INVENTORY_NET_POSITION, BOT_PNL_CENTS
+from config import RISK_GAMMA, MIN_SPREAD, ORDER_SIZE
 
 logger = logging.getLogger("MarketMaker")
 logger.setLevel(logging.INFO)
@@ -30,14 +33,14 @@ class AvellanedaStoikovBot:
     def __init__(
         self, 
         ticker: str, 
-        gamma: float = 0.5, # Risk aversion. How much 1 contract skews our price (in cents).
-        min_spread: int = 4, # Minimum spread to quote (in cents).
-        order_size: int = 1   # Number of contracts to quote on each side.
+        gamma: float = None, # Risk aversion. How much 1 contract skews our price (in cents).
+        min_spread: int = None, # Minimum spread to quote (in cents).
+        order_size: int = None   # Number of contracts to quote on each side.
     ):
         self.ticker = ticker
-        self.gamma = gamma 
-        self.min_spread = min_spread
-        self.order_size = order_size
+        self.gamma = gamma if gamma is not None else RISK_GAMMA
+        self.min_spread = min_spread if min_spread is not None else MIN_SPREAD
+        self.order_size = order_size if order_size is not None else ORDER_SIZE
         
         # Core Managers
         self.ws_client = KalshiWebsocketClient()
@@ -58,6 +61,12 @@ class AvellanedaStoikovBot:
         """Initializes infrastructure and starts the main trading loop."""
         logger.info(f"Starting Market Maker for {self.ticker}")
         
+        # Start Prometheus Metrics Server
+        start_metrics_server(port=8000)
+
+        # 0. Recover state and cancel orphaned orders
+        await self.om.sync_and_recover_state()
+        
         # 1. Start the WebSocket Connection
         asyncio.create_task(self.ws_client.connect())
         
@@ -69,6 +78,10 @@ class AvellanedaStoikovBot:
         
         # 3. Hydrate initial inventory and subscribe to channels
         await self.inv_manager.hydrate()
+        
+        # 3b. Launch the periodic reconciliation background task
+        asyncio.create_task(self.inv_manager._sync_loop())
+        
         await self.inv_manager.subscribe()
         await self.ob_manager.subscribe([self.ticker])
         
@@ -84,10 +97,18 @@ class AvellanedaStoikovBot:
             logger.info("Market Maker stopped.")
         except Exception as e:
             logger.error(f"Fatal error in trading loop: {e}", exc_info=True)
+            await send_alert(f"Fatal error in trading loop for {self.ticker}: {e}")
             self.running = False
 
     async def _tick(self):
         """The core logic evaluated every cycle."""
+        
+        # Track PnL and Inventory immediately regardless of orderbook state so metrics always show up on Grafana
+        inventory = self.inv_manager.get_position(self.ticker)
+        BOT_INVENTORY_NET_POSITION.labels(ticker=self.ticker).set(inventory)
+        
+        balance = self.inv_manager.get_balance()
+        BOT_PNL_CENTS.labels(ticker=self.ticker).set(balance)
         
         best_bid = self.ob_manager.get_best_bid(self.ticker)
         best_ask = self.ob_manager.get_best_ask(self.ticker)
@@ -107,7 +128,6 @@ class AvellanedaStoikovBot:
         
         # 2. Get Inventory
         # Convention: positive inventory = holding net YES
-        inventory = self.inv_manager.get_position(self.ticker)
         
         # 3. Calculate Reservation Price (R)
         # R = M - (q * gamma)

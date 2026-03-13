@@ -1,11 +1,7 @@
 import asyncio
 import signal
-import sys
-from pathlib import Path
 import json
 
-project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root))
 
 from execution.order_manager import OrderManager
 from execution.kill_switch import KillSwitch
@@ -17,7 +13,7 @@ async def main():
     
     # Setup Signal Handler for Manual Trigger (Ctrl+C)
     def handle_sigint(signum, frame):
-        print("\n\n>>> SIGINT RECEIVED. MANUAL KILL SWITCH TRIGGERED <<<")
+        print("\n\n>>> SIGINT RECEIVED. Manual Kill Switch Triggered <<<")
         killer.trigger_synchronous()
         sys.exit(0)
         
@@ -56,7 +52,6 @@ async def main():
     await killer.trigger()
     
     print(f"Active orders after Kill Switch: {len(om.active_orders)}")
-    
 
 if __name__ == "__main__":
     asyncio.run(main())
