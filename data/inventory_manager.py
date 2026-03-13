@@ -3,12 +3,8 @@ import requests
 import asyncio
 import certifi
 from typing import Dict, Any
-import sys
-from pathlib import Path
 
 # Provide required imports from our new module
-project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root))
 
 from config import BASE_URL
 from auth.kalshi_auth import get_auth_headers

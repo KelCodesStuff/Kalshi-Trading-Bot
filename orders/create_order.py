@@ -2,12 +2,8 @@
 import json
 import uuid
 import requests
-import sys
-from pathlib import Path
 
 # 1. Dynamically add the project root to the system path
-project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root))
 
 from auth.kalshi_auth import get_auth_headers
 from config import BASE_URL
