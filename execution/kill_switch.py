@@ -6,6 +6,7 @@ import certifi
 from config import BASE_URL
 from auth.kalshi_auth import get_auth_headers
 from execution.order_manager import OrderManager
+from utils.alerting import send_alert
 
 logger = logging.getLogger("KillSwitch")
 logger.setLevel(logging.INFO)
@@ -26,7 +27,15 @@ class KillSwitch:
 
     def trigger_synchronous(self):
         """Immediately cancel all known local orders synchronously."""
-        logger.warning("KILL SWITCH TRIGGERED (Sync). Canceling all local orders...")
+        logger.warning("Kill Switch Triggered (Sync). Canceling all local orders...")
+        # Since this is synchronous, fire and forget the alert in the background event loop
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(send_alert("Kill Switch Triggered (Synchronous). Withdrawing all quotes."))
+        except RuntimeError:
+            # We might not have a running loop in all contexts
+            pass
+
         active_ids = list(self.om.active_orders.keys())
         
         if not active_ids:
@@ -59,7 +68,9 @@ class KillSwitch:
 
     async def trigger(self):
         """Asynchronously triggers the kill switch using the core order manager."""
-        logger.warning("KILL SWITCH TRIGGERED (Async). Canceling all local orders...")
+        logger.warning("Kill Switch Triggered (Async). Canceling all local orders...")
+        await send_alert("Kill Switch Triggered (Asynchronous). Withdrawing all quotes.")
+        
         active_ids = list(self.om.active_orders.keys())
         
         if not active_ids:

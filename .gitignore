@@ -27,3 +27,9 @@ ENV/
 # IDEs
 .idea/
 .vscode/
+
+*.db
+.env
+*.pem
+*.egg-info/
+.pytest_cache/
