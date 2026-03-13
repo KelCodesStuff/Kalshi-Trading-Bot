@@ -12,6 +12,7 @@ sys.path.insert(0, str(project_root))
 
 from config import BASE_URL
 from auth.kalshi_auth import get_auth_headers
+from utils.metrics import measure_latency
 
 logger = logging.getLogger("InventoryManager")
 
@@ -34,7 +35,9 @@ class InventoryManager:
         sign_path = "/trade-api/v2/portfolio/balance"
         headers = get_auth_headers(method="GET", sign_path=sign_path)
         
-        response = requests.get(BASE_URL + sign_path, headers=headers, verify=certifi.where())
+        with measure_latency("GET", "/trade-api/v2/portfolio/balance"):
+            response = requests.get(BASE_URL + sign_path, headers=headers, verify=certifi.where())
+            
         if response.status_code == 200:
             self.balance_cents = response.json().get("balance", 0)
             logger.info(f"Hydrated Balance: {self.balance_cents} cents.")
@@ -46,22 +49,43 @@ class InventoryManager:
         sign_path = "/trade-api/v2/portfolio/positions"
         headers = get_auth_headers(method="GET", sign_path=sign_path)
         
-        response = requests.get(BASE_URL + sign_path, headers=headers, params={"limit": 200}, verify=certifi.where())
+        with measure_latency("GET", "/trade-api/v2/portfolio/positions"):
+            response = requests.get(BASE_URL + sign_path, headers=headers, params={"limit": 200}, verify=certifi.where())
+            
         if response.status_code == 200:
             market_positions = response.json().get("market_positions", [])
+            new_positions = {}
             for pos in market_positions:
                 ticker = pos.get("ticker")
                 position = pos.get("position", 0)
                 if ticker and position != 0:
-                    self.positions[ticker] = position
+                    new_positions[ticker] = position
+            
+            self.positions = new_positions
             logger.info(f"Hydrated {len(self.positions)} active positions.")
         else:
             logger.error(f"Failed to fetch positions: {response.text}")
 
     async def hydrate(self):
         """Run hydration asynchronously to avoid blocking the event loop."""
+        logger.info("Hydrating inventory state from REST API...")
         await asyncio.to_thread(self._hydrate_balance)
         await asyncio.to_thread(self._hydrate_positions)
+        
+    async def _sync_loop(self):
+        """
+        Continuously runs in the background. Every 5 minutes, 
+        fetches the authoritative ground truth from the REST API 
+        to correct any state drift from missed WebSocket messages.
+        """
+        logger.info("Starting background state drift reconciliation loop (5 min intervals).")
+        while True:
+            await asyncio.sleep(300) # 5 minutes
+            try:
+                logger.info("Running periodic inventory reconciliation to fix state drift...")
+                await self.hydrate()
+            except Exception as e:
+                logger.error(f"Error during periodic inventory reconciliation: {e}")
 
     async def subscribe(self):
         """Subscribe to the 'fill' channel to listen for my own execution updates."""

@@ -50,6 +50,9 @@ class KalshiWebsocketClient:
         
         ssl_context = ssl.create_default_context(cafile=certifi.where())
         
+        max_reconnect_delay = 60
+        reconnect_delay = 1
+        
         while True:
             try:
                 # Disable ping_interval for now if Kalshi server uses a custom ping mechanism,
@@ -57,6 +60,7 @@ class KalshiWebsocketClient:
                 async with websockets.connect(self.ws_url, additional_headers=headers, ssl=ssl_context) as websocket:
                     self.ws_connection = websocket
                     self.is_connected = True
+                    reconnect_delay = 1 # Reset backoff on successful connection
                     logger.info("Connected successfully.")
                     
                     # Send all queued subscriptions upon successful connect
@@ -74,12 +78,14 @@ class KalshiWebsocketClient:
                             
             except websockets.exceptions.ConnectionClosed as e:
                 self.is_connected = False
-                logger.warning(f"Connection closed. Reconnecting in 5 seconds... ({e})")
-                await asyncio.sleep(5)
+                logger.warning(f"Connection closed. Reconnecting in {reconnect_delay} seconds... ({e})")
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = min(reconnect_delay * 2, max_reconnect_delay)
             except Exception as e:
                 self.is_connected = False
-                logger.error(f"WebSocket error: {e}. Reconnecting in 5 seconds...")
-                await asyncio.sleep(5)
+                logger.error(f"WebSocket error: {e}. Reconnecting in {reconnect_delay} seconds...")
+                await asyncio.sleep(reconnect_delay)
+                reconnect_delay = min(reconnect_delay * 2, max_reconnect_delay)
 
     async def send_message(self, message: dict):
         """Send a JSON payload over the socket."""
