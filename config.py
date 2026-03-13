@@ -1,5 +1,9 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Automatically load environment variables from a .env file if present
+load_dotenv()
 
 # Project root directory
 PROJECT_ROOT = Path(__file__).resolve().parent
