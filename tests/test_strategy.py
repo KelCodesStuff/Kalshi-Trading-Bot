@@ -39,7 +39,7 @@ async def main():
     # 2. Wire Safety Kill Switch to manual Ctrl+C
     killer = KillSwitch(bot.om)
     def handle_sigint(signum, frame):
-        print("\n\n>>> SIGINT. MANUAL KILL SWITCH TRIGGERED <<<")
+        print("\n\n>>> SIGINT. Manual Kill Switch Triggered <<<")
         # Instantly scrub local execution layer 
         killer.trigger_synchronous()
         sys.exit(0)
