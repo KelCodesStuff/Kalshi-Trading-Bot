@@ -3,6 +3,7 @@ import signal
 import random
 import requests
 import certifi
+import sys
 
 
 from strategy.market_maker import AvellanedaStoikovBot
