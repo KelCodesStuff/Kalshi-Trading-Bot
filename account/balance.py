@@ -2,13 +2,9 @@
 
 # Import standard libraries for HTTP requests and system path manipulation
 import requests
-import sys
-from pathlib import Path
 
 # 1. Dynamically add the project root to the system path
 # This allows the script in the /balance/ folder to import modules from the root
-project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root))
 
 # 2. Import the centralized authentication function we just created
 from auth.kalshi_auth import get_auth_headers
