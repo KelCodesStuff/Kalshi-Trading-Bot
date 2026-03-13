@@ -14,8 +14,10 @@ else:
     BASE_URL = "https://demo-api.kalshi.co"
 
 # API Authentication configuration
-default_api_key = "e89fc161-50e5-4807-afa1-cb49e7783b36" if ENVIRONMENT == "prod" else "ee3e66bb-3699-4cf4-8a64-b8eb2328c275"
-API_KEY = os.getenv("KALSHI_API_KEY", default_api_key)
+API_KEY = os.getenv("KALSHI_API_KEY")
+
+if not API_KEY:
+    raise ValueError("KALSHI_API_KEY environment variable is not set!")
 
 # Private key path
 # Use a different default key file for production, or allow overriding via environment variable
