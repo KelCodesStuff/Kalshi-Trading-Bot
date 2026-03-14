@@ -16,7 +16,7 @@ async def main():
     ticker = TARGET_TICKER
     if not ticker:
         print("No TARGET_TICKER in .env, fetching a random active market...")
-        r = requests.get(BASE_URL + "/trade-api/v2/markets", params={"limit": 100}, verify=certifi.where())
+        r = requests.get(BASE_URL + "/trade-api/v2/markets", params={"limit": 1000}, verify=certifi.where())
         active_markets = [m["ticker"] for m in r.json().get("markets", []) if m.get("status") == "active"]
         
         if not active_markets:
