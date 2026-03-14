@@ -1,4 +1,4 @@
-# Kalshi Bot Deployment Guide (DigitalOcean & tmux)
+# Project Setup Guide
 
 To properly run your market-making bot 24/7 without worrying about your laptop going to sleep, losing internet, or running out of power, deploying it to a small remote server is highly recommended. 
 
