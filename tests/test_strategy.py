@@ -23,7 +23,12 @@ async def main():
             print("No active markets found on Demo.")
             sys.exit(1)
             
-        ticker = random.choice(active_markets)
+        # Prioritize high-liquidity markets like Basketball on Demo
+        high_liquidity = [m for m in active_markets if "NBA" in m or "NCAA" in m]
+        if high_liquidity:
+            ticker = random.choice(high_liquidity)
+        else:
+            ticker = random.choice(active_markets)
         
     print(f"Selected Market: {ticker}")
     print("Starting Avellaneda-Stoikov Bot... Press Ctrl+C to Kill.")
