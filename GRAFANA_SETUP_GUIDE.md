@@ -1,4 +1,4 @@
-# Grafana Monitoring Setup
+# Grafana Setup Guide
 
 This repository comes pre-configured with a Prometheus metrics exposure framework built into the Python trading bot. A `docker-compose.yml` and `prometheus.yml` file is provided to easily spin up a local observability stack.
 
