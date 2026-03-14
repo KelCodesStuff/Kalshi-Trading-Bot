@@ -11,25 +11,29 @@ from execution.kill_switch import KillSwitch
 
 
 async def main():
-    print("Fetching an active market ticker for testing the Strategy...")
-    from config import BASE_URL
-    r = requests.get(BASE_URL + "/trade-api/v2/markets", params={"limit": 100}, verify=certifi.where())
-    active_markets = [m["ticker"] for m in r.json().get("markets", []) if m.get("status") == "active"]
+    from config import BASE_URL, TARGET_TICKER, RISK_GAMMA, MIN_SPREAD, ORDER_SIZE
     
-    if not active_markets:
-        print("No active markets found on Demo.")
-        sys.exit(1)
+    ticker = TARGET_TICKER
+    if not ticker:
+        print("No TARGET_TICKER in .env, fetching a random active market...")
+        r = requests.get(BASE_URL + "/trade-api/v2/markets", params={"limit": 100}, verify=certifi.where())
+        active_markets = [m["ticker"] for m in r.json().get("markets", []) if m.get("status") == "active"]
         
-    ticker = random.choice(active_markets)
+        if not active_markets:
+            print("No active markets found on Demo.")
+            sys.exit(1)
+            
+        ticker = random.choice(active_markets)
+        
     print(f"Selected Market: {ticker}")
     print("Starting Avellaneda-Stoikov Bot... Press Ctrl+C to Kill.")
     
     # 1. Initialize Bot
     bot = AvellanedaStoikovBot(
         ticker=ticker,
-        gamma=0.5, # 0.5 cents skew per 1 contract held
-        min_spread=4, # 4 cent minimum profit margin
-        order_size=1
+        gamma=RISK_GAMMA,
+        min_spread=MIN_SPREAD,
+        order_size=ORDER_SIZE
     )
     
     # 2. Wire Safety Kill Switch to manual Ctrl+C
