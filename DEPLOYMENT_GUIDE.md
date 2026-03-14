@@ -23,7 +23,7 @@ If Grafana is showing "No Data", it is likely because the bot is currently turne
    python tests/test_strategy.py
    ```
 5. **Detach:** Wait a few seconds to verify it connects to the WebSocket and begins the "quoting loop". Once it does, press `Ctrl+B`, let go, and press `D` to detach and leave it running in the background!
-
+6. **Stop the bot:** If you ever need to stop the bot, re-attach to the session (`tmux attach -t kalshi`) and press `Ctrl+C`. This safely triggers the synchronous kill switch, cancelling all of your active orders before shutting the bot down.
 ## 2. Verify Prometheus (The Database)
 Now that the bot is running on the Droplet, your local Prometheus database (running via Docker on your Mac) should be successfully scraping it over the internet every 2 seconds.
 
