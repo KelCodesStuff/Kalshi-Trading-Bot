@@ -146,7 +146,11 @@ class AvellanedaStoikovBot:
         if optimal_bid >= optimal_ask:
             optimal_bid = optimal_ask - 1
             
-        logger.debug(f"[STATE] Mid: {mid_price:.2f} | Inv: {inventory} | Res Price: {reservation_price:.2f}")
+        logger.info(
+            f"[A-S MATH] Mid={mid_price:.1f}c | Inventory={inventory} | Gamma={self.gamma} | "
+            f"ReservationPrice={reservation_price:.2f}c | Spread={self.min_spread}c "
+            f"→ Bid={optimal_bid}c  Ask={optimal_ask}c"
+        )
             
         # 5. Execute Output
         await self._update_quotes(optimal_bid, optimal_ask)

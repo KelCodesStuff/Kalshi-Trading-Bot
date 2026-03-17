@@ -53,12 +53,13 @@ class InventoryManager:
             new_positions = {}
             for pos in market_positions:
                 ticker = pos.get("ticker")
-                position = pos.get("position", 0)
+                # Kalshi V2 API returns position as 'position_fp' (float string) or 'position' (int)
+                position = int(float(pos.get("position_fp", pos.get("position", 0))))
                 if ticker and position != 0:
                     new_positions[ticker] = position
             
             self.positions = new_positions
-            logger.info(f"Hydrated {len(self.positions)} active positions.")
+            logger.info(f"Hydrated {len(self.positions)} active positions: {self.positions}")
         else:
             logger.error(f"Failed to fetch positions: {response.text}")
 

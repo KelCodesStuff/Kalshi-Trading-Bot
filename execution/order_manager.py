@@ -340,11 +340,58 @@ class OrderManager:
                 if cancel_tasks:
                     logger.info(f"Executing {len(cancel_tasks)} cancellation tasks...")
                     await asyncio.gather(*cancel_tasks, return_exceptions=True)
-                    logger.info("State recovery and reconciliation complete.")
                 else:
                     logger.info("No orphaned resting orders found. State is clean.")
             else:
                 logger.error(f"Failed to fetch resting orders during recovery. Status: {response.status_code}, Response: {response.text}")
+                
+            # Now hunt for combo orders (order_groups)
+            group_path = "/trade-api/v2/portfolio/order_groups"
+            group_headers = get_auth_headers(method="GET", sign_path=group_path)
+            
+            with measure_latency("GET", group_path):
+                group_resp = await asyncio.to_thread(
+                    requests.get,
+                    BASE_URL + group_path,
+                    headers=group_headers,
+                    params={"status": "resting", "limit": 100},
+                    timeout=10,
+                    verify=certifi.where()
+                )
+                
+            if group_resp.status_code == 200:
+                groups_list = group_resp.json().get("order_groups", [])
+                logger.info(f"Found {len(groups_list)} resting combo orders (order groups) on Kalshi.")
+                
+                group_tasks = []
+                for group in groups_list:
+                    group_id = group.get("order_group_id")
+                    logger.info(f"Preparing to cancel orphaned combo order group: {group_id}")
+                    
+                    # Group cancellation endpoint is DELETE /trade-api/v2/portfolio/order_groups/{order_group_id}
+                    cancel_path = f"/trade-api/v2/portfolio/order_groups/{group_id}"
+                    
+                    async def cancel_group(path, gid):
+                        headers = get_auth_headers(method="DELETE", sign_path=path)
+                        res = await asyncio.to_thread(
+                            requests.delete,
+                            BASE_URL + path,
+                            headers=headers,
+                            timeout=10,
+                            verify=certifi.where()
+                        )
+                        if res.status_code in [200, 204]:
+                            logger.info(f"Successfully killed combo order {gid}")
+                        else:
+                            logger.error(f"Failed to kill combo order {gid}: {res.status_code} - {res.text}")
+                    
+                    group_tasks.append(cancel_group(cancel_path, group_id))
+                
+                if group_tasks:
+                    logger.info(f"Executing {len(group_tasks)} combo cancellation tasks...")
+                    await asyncio.gather(*group_tasks, return_exceptions=True)
+                    
+            logger.info("State recovery and reconciliation complete.")
                 
         except Exception as e:
             import traceback
