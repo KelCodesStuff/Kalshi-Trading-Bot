@@ -28,13 +28,19 @@ class KillSwitch:
     def trigger_synchronous(self):
         """Immediately cancel all known local orders synchronously."""
         logger.warning("Kill Switch Triggered (Sync). Canceling all local orders...")
-        # Since this is synchronous, fire and forget the alert in the background event loop
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(send_alert("Kill Switch Triggered (Synchronous). Withdrawing all quotes."))
-        except RuntimeError:
-            # We might not have a running loop in all contexts
-            pass
+        # Since this is synchronous and we are about to exit, we must block to send the alert
+        from config import ALERT_WEBHOOK_URL
+        if ALERT_WEBHOOK_URL:
+            try:
+                payload = {"text": "🚨 *Kalshi Bot Alert* \nKill Switch Triggered (Synchronous). Withdrawing all quotes."}
+                requests.post(
+                    ALERT_WEBHOOK_URL,
+                    json=payload,
+                    headers={"Content-Type": "application/json"},
+                    timeout=2
+                )
+            except Exception as e:
+                logger.error(f"Failed to send sync webhook alert: {e}")
 
         active_ids = list(self.om.active_orders.keys())
         
@@ -42,10 +48,17 @@ class KillSwitch:
             logger.info("No active local orders to kill.")
             return
             
-        for order_id in active_ids:
-            logger.warning(f"Canceling {order_id}...")
+        for client_order_id in active_ids:
+            order_info = self.om.active_orders.get(client_order_id)
+            kalshi_order_id = order_info.get("kalshi_order_id") if order_info else None
+            
+            if not kalshi_order_id:
+                # Fallback just in case Kalshi order ID wasn't populated yet
+                kalshi_order_id = client_order_id
+
+            logger.warning(f"Canceling {client_order_id} (Kalshi ID: {kalshi_order_id})...")
             # Fire an emergency blocking cancel to Kalshi using the raw request wrapper
-            sign_path = f"/trade-api/v2/portfolio/orders/{order_id}"
+            sign_path = f"/trade-api/v2/portfolio/orders/{kalshi_order_id}"
             try:
                 headers = get_auth_headers(method="DELETE", sign_path=sign_path)
                 resp = requests.delete(
@@ -55,16 +68,16 @@ class KillSwitch:
                     verify=certifi.where()
                 )
                 if resp.status_code in [200, 204]:
-                    logger.info(f"Successfully killed {order_id}")
-                    self.om.active_orders.pop(order_id, None)
+                    logger.info(f"Successfully killed {client_order_id}")
+                    self.om.active_orders.pop(client_order_id, None)
                 elif resp.status_code == 404:
-                    logger.info(f"Order {order_id} already closed/filled.")
-                    self.om.active_orders.pop(order_id, None)
+                    logger.info(f"Order {client_order_id} already closed/filled.")
+                    self.om.active_orders.pop(client_order_id, None)
                 else:
-                    logger.error(f"Failed to kill {order_id}: {resp.status_code} - {resp.text}")
+                    logger.error(f"Failed to kill {client_order_id}: {resp.status_code} - {resp.text}")
             except Exception as e:
                 import traceback
-                logger.error(f"Exception while killing {order_id}: {e}\n{traceback.format_exc()}")
+                logger.error(f"Exception while killing {client_order_id}: {e}\n{traceback.format_exc()}")
 
     async def trigger(self):
         """Asynchronously triggers the kill switch using the core order manager."""
