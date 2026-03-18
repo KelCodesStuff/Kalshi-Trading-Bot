@@ -1,7 +1,0 @@
-global:
-  scrape_interval: 2s # How often to scrape metrics
-
-scrape_configs:
-  - job_name: 'kalshi-bot'
-    static_configs:
-      - targets: ['159.65.229.254:8000'] # DigitalOcean droplet
