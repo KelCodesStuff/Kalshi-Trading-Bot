@@ -1,0 +1,23 @@
+// Grafana Alloy Configuration for scraping the Kalshi Bot and pushing to Grafana Cloud
+
+// 1. Scrape the local Prometheus metrics exposed by the Python bot
+prometheus.scrape "kalshi_bot" {
+  targets = [
+    {"__address__" = "localhost:8000"},
+  ]
+  forward_to = [prometheus.remote_write.metrics_hosted_prometheus.receiver]
+  scrape_interval = "10s"
+}
+
+// 2. Push scraped metrics to Grafana Cloud
+prometheus.remote_write "metrics_hosted_prometheus" {
+  endpoint {
+    name = "hosted-prometheus"
+    url  = "https://prometheus-prod-66-prod-us-east-3.grafana.net/api/prom/push"
+    
+    basic_auth {
+      username = "3049654"
+      password = "*GRAFANA_REDACTED*"
+    }
+  }
+}
