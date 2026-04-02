@@ -7,7 +7,7 @@ If Grafana is showing "No Data", it is likely because the bot is currently turne
 
 1. **SSH into your droplet:** 
    ```bash
-   ssh root@159.65.229.254
+   ssh root@<YOUR_DROPLET_IP>
    ```
 2. **Connect to your background session:** 
    ```bash
