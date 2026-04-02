@@ -3,7 +3,6 @@
 - **Why**: 
 
 ## Related Issue
-Closes #
 
 ## Type of Change
 - [ ] Bug fix
