@@ -17,7 +17,7 @@ prometheus.remote_write "metrics_hosted_prometheus" {
     
     basic_auth {
       username = "3049654"
-      password = "*GRAFANA_REDACTED*"
+      password = sys.env("GRAFANA_API_KEY")
     }
   }
 }
