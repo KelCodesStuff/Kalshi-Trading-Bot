@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  bot:
+    image: ghcr.io/kelcodesstuff/kalshi-trading-bot:latest
+    container_name: kalshi-bot
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    # The application logs gracefully to stdout, which Docker captures.
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"

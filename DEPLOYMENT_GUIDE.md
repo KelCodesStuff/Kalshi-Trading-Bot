@@ -9,22 +9,26 @@ If Grafana is showing "No Data", it is likely because the bot is currently turne
    ```bash
    ssh root@<YOUR_DROPLET_IP>
    ```
-2. **Connect to your background session:** 
-   ```bash
-   tmux attach -t kalshi
-   ```
-   *(If it says session not found, create a new one: `tmux new-session -s kalshi`)*
-3. **Navigate to the folder:** 
+2. **Navigate to the deployment folder:** 
    ```bash
    cd ~/Kalshi-Trading-Bot
    ```
-4. **Start the bot:** 
+3. **Check the bot status:** 
    ```bash
-   python tests/test_strategy.py
+   docker compose ps
    ```
-5. **Detach:** Wait a few seconds to verify it connects to the WebSocket and begins the "quoting loop". Once it does, press `Ctrl+B`, let go, and press `D` to detach and leave it running in the background!
-
-6. **Stop the bot:** If you ever need to stop the bot, re-attach to the session (`tmux attach -t kalshi`) and press `Ctrl+C`. This safely triggers the synchronous kill switch, cancelling all of your active orders before shutting the bot down.
+4. **View live logs:** 
+   ```bash
+   docker compose logs -f bot
+   ```
+5. **Restart the bot (if needed):** 
+   ```bash
+   docker compose restart bot
+   ```
+6. **Stop the bot:** 
+   ```bash
+   docker compose down
+   ```
 
 ## 2. Verify Prometheus (The Database)
 Now that the bot is running on the Droplet, your local Prometheus database (running via Docker on your Mac) should be successfully scraping it over the internet every 2 seconds.
