@@ -7,3 +7,5 @@ __pycache__
 *.key
 venv/
 .pytest_cache/
+tests/*
+!tests/test_strategy.py
