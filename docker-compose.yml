@@ -9,6 +9,11 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    # Mount the local private keys from the host directly into the container's working directory (/app)
+    volumes:
+      - ./kalshi_private_key_demo.pem:/app/kalshi_private_key_demo.pem:ro
+      # Uncomment the line below when you are ready to trade with real fiat money
+      # - ./kalshi_private_key_prod.pem:/app/kalshi_private_key_prod.pem:ro
     # The application logs gracefully to stdout, which Docker captures.
     logging:
       driver: "json-file"
