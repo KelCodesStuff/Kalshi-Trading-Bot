@@ -9,6 +9,9 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    # Forcefully override the legacy path that might be hardcoded in the Droplet's .env file
+    environment:
+      - KALSHI_PRIVATE_KEY_PATH=/app/kalshi_private_key_demo.pem
     # Mount the local private keys from the host directly into the container's working directory (/app)
     volumes:
       - ./kalshi_private_key_demo.pem:/app/kalshi_private_key_demo.pem:ro
