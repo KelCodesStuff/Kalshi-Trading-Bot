@@ -15,12 +15,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy the setup file to install dependencies via pip
 COPY setup.py /app/
 
-# Upgrade pip and install the app's requirements
+# Upgrade pip and install the app's requirements using an editable install 
+# (This caches the third-party dependencies like websockets, certifi, etc.)
 RUN pip install --upgrade pip
 RUN pip install -e .
 
 # Copy the actual application files
 COPY . /app/
+
+# Officially install the application as a Python package. 
+# This correctly registers the 'strategy' and 'execution' modules using setup.py!
+RUN pip install .
 
 # Expose port 8000 for Prometheus metrics
 EXPOSE 8000
