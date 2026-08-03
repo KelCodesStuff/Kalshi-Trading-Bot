@@ -4,6 +4,42 @@ This project is a fully-functional algorithmic **market-making trading bot** bui
 
 ## System Architecture
 
+```mermaid
+graph TD
+    subgraph Local Environment [Local Environment (Monitoring)]
+        Grafana[Grafana Dashboard] -->|Visualize Metrics| Prometheus[Prometheus Database]
+    end
+
+    subgraph DigitalOcean [DigitalOcean Droplet (Cloud VPS)]
+        subgraph DockerContainer [Docker Container: kalshi-bot]
+            BotLoop[Avellaneda-Stoikov Bot Loop]
+            OrderBook[Orderbook Manager]
+            InvManager[Inventory Manager]
+            OrderManager[Order Manager]
+            KillSwitch[Kill Switch]
+            Auth[RSA Cryptographic Auth]
+        end
+    end
+
+    subgraph External [External Services]
+        GHCR[GitHub Container Registry] -->|Deploy Image| DockerContainer
+        KalshiWS[Kalshi V2 WebSockets] <-->|Real-time Feed & Fills| OrderBook
+        KalshiWS <-->|Fills| InvManager
+        OrderManager -->|REST Order Placement/Cancel| KalshiREST[Kalshi V2 REST API]
+        KillSwitch -->|Emergency Cancel| KalshiREST
+        Prometheus -->|Scrape Metrics: Port 8000| BotLoop
+    end
+
+    %% Flow relationships inside the container
+    BotLoop -->|Evaluate Risk & Mid Price| OrderBook
+    BotLoop -->|Evaluate Exposure| InvManager
+    BotLoop -->|Send Quotes| OrderManager
+    BotLoop -.->|Interrupt / Safety Shutdown| KillSwitch
+    OrderManager -.->|Register Active IDs| KillSwitch
+    Auth -.->|Sign Requests| OrderManager
+    Auth -.->|Authorize Connection| KalshiWS
+```
+
 The trading bot is composed of several core modules:
 
 ### 1. Authentication & Configuration (`auth/`, `config.py`)
@@ -25,22 +61,3 @@ The trading bot is composed of several core modules:
   - Evaluates your current contract inventory position to adjust a "Reservation Price" (your true target price) to reduce directional inventory risk, heavily influenced by an adjustable risk-aversion parameter (`gamma`).
   - Continuously places and replaces Bid and Ask limit orders symmetrically around this Reservation Price to capture a minimum profit margin (`min_spread`).
 
-## Testing Suite
-
-All tests are located in the `tests/` directory and are designed to validate specific subsystems of the architecture on the Kalshi Demo environment. 
-
-### `tests/test_ws_stream.py` (Data & Subscriptions)
-**Purpose**: Verifies that the core data ingestion pipeline and WebSocket subscriptions work.
-**Behavior**: Connects to Kalshi's WebSocket API, subscribes to the orderbook for a random active market, and simultaneously hits the REST API to hydrate your Demo portfolio balance. It spends 5 seconds listening to the live stream, outputting the continuous `Best Bid`, `Best Ask`, and your net position tracking.
-
-### `tests/test_execution.py` (Order Management)
-**Purpose**: Verifies that the bot can accurately place, track, and explicitly cancel orders via the REST API.
-**Behavior**: Successfully places a dummy limit order (1 "yes" contract) priced at 1 cent (deep out-of-the-money) on a random market. The `OrderManager` captures the local ID. After 3 seconds, it sends a REST API request to fully cancel that specific order, validating the round-trip execution capabilities.
-
-### `tests/test_kill_switch.py` (Emergency Safety)
-**Purpose**: Validates the global safety mechanism designed to clear out risk exposure instantly in an emergency.
-**Behavior**: Places a 1-cent dummy limit order and registers it locally. The test script then simulates an unexpected software failure by programmatically invoking the async kill switch trigger. The Kill Switch immediately iterates over all tracked active orders and fires asynchronous cancellation API calls, ensuring the account is left flat.
-
-### `tests/test_strategy.py` (The Full Bot Loop)
-**Purpose**: A dry-run of the full, integrated market-making bot.
-**Behavior**: Selects an active market and successfully boots the `AvellanedaStoikovBot` class. The bot initializes the WebSocket, syncs its REST state, opens subscriptions, and begins its main quoting valuation loop. It is intentionally wired to listen for a manual keyboard interrupt (`Ctrl+C`). When triggered, it successfully fires the synchronous safety shut-down sequence—withdrawing all quotes—before cleanly exiting the process.
