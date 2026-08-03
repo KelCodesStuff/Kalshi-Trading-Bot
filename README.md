@@ -6,12 +6,12 @@ This project is a fully-functional algorithmic **market-making trading bot** bui
 
 ```mermaid
 graph TD
-    subgraph Local Environment [Local Environment (Monitoring)]
+    subgraph LocalEnv ["Local Environment (Monitoring)"]
         Grafana[Grafana Dashboard] -->|Visualize Metrics| Prometheus[Prometheus Database]
     end
 
-    subgraph DigitalOcean [DigitalOcean Droplet (Cloud VPS)]
-        subgraph DockerContainer [Docker Container: kalshi-bot]
+    subgraph DigitalOcean ["DigitalOcean Droplet (Cloud VPS)"]
+        subgraph DockerContainer ["Docker Container: kalshi-bot"]
             BotLoop[Avellaneda-Stoikov Bot Loop]
             OrderBook[Orderbook Manager]
             InvManager[Inventory Manager]
@@ -21,7 +21,7 @@ graph TD
         end
     end
 
-    subgraph External [External Services]
+    subgraph External ["External Services"]
         GHCR[GitHub Container Registry] -->|Deploy Image| DockerContainer
         KalshiWS[Kalshi V2 WebSockets] <-->|Real-time Feed & Fills| OrderBook
         KalshiWS <-->|Fills| InvManager
@@ -39,8 +39,6 @@ graph TD
     Auth -.->|Sign Requests| OrderManager
     Auth -.->|Authorize Connection| KalshiWS
 ```
-
-The trading bot is composed of several core modules:
 
 ### 1. Authentication & Configuration (`auth/`, `config.py`)
 - **`config.py`**: Manages environment variables (Demo vs. Production), API keys, and RSA private key path configurations.
