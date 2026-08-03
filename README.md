@@ -38,6 +38,12 @@ graph TD
     OrderManager -.->|Register Active IDs| KillSwitch
     Auth -.->|Sign Requests| OrderManager
     Auth -.->|Authorize Connection| KalshiWS
+
+    %% Assign styles to subgraph containers
+    style LocalEnv fill:#172b22,stroke:#2d5a27,stroke-width:2px;
+    style DigitalOcean fill:#0f1d2e,stroke:#1f3c5c,stroke-width:2px;
+    style External fill:#1f132e,stroke:#3b205c,stroke-width:2px;
+    style DockerContainer fill:#142334,stroke:#264870,stroke-width:1px,stroke-dasharray: 5 5;
 ```
 
 ### 1. Authentication & Configuration (`auth/`, `config.py`)
