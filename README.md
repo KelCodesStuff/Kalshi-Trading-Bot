@@ -8,7 +8,7 @@ This project is a fully-functional algorithmic market-making trading bot built f
    ```bash
    git clone https://github.com/KelCodesStuff/Kalshi-Trading-Bot.git
    cd Kalshi-Trading-Bot
-   pip install -r requirements.txt
+   pip install .
    ```
 2. **Configure environment:**
    ```bash
