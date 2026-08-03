@@ -1,6 +1,6 @@
 # Kalshi Algorithmic Market Maker Bot
 
-This project is a fully-functional algorithmic **market-making trading bot** built for the Kalshi prediction market platform. Its primary goal is to provide dual-sided liquidity (bids and asks) on Kalshi markets to capture the bid-ask spread while actively managing inventory risk.
+This project is a fully-functional algorithmic market-making trading bot built for the Kalshi prediction market platform. Its primary goal is to provide dual-sided liquidity (bids and asks) on Kalshi markets to capture the bid-ask spread while actively managing inventory risk.
 
 ## Quick Start
 
@@ -103,4 +103,4 @@ When running, the bot feeds live log output updating its quotes:
 
 ## Financial Disclaimer
 
-This project is for educational and research purposes only. Algorithmic trading carries significant financial risk. Live trading configuration should only be attempted after thorough testing on the Demo environment. Use at your own risk. The authors are not responsible for any financial losses incurred.
+This project is for research purposes only. Algorithmic trading carries significant financial risk. Live trading configuration should only be attempted after thorough testing on the Demo environment. Use at your own risk. The authors are not responsible for any financial losses incurred.
