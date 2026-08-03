@@ -1,46 +1,106 @@
 # Kalshi Algorithmic Market Maker Bot
 
-This project is a fully-functional algorithmic **market-making trading bot** built for the Kalshi prediction market platform. Its primary goal is to provide dual-sided liquidity (bids and asks) on Kalshi markets to capture the bid-ask spread while actively managing inventory risk.
+This project is a fully-functional algorithmic market-making trading bot built for the Kalshi prediction market platform. Its primary goal is to provide dual-sided liquidity (bids and asks) on Kalshi markets to capture the bid-ask spread while actively managing inventory risk.
+
+## Quick Start
+
+1. **Clone and install dependencies:**
+   ```bash
+   git clone https://github.com/KelCodesStuff/Kalshi-Trading-Bot.git
+   cd Kalshi-Trading-Bot
+   pip install .
+   ```
+2. **Configure environment:**
+   ```bash
+   cp .env.example .env
+   # Add your Kalshi Demo API credentials and RSA key paths to .env
+   ```
+3. **Run the bot loop:**
+   ```bash
+   python main.py
+   ```
 
 ## System Architecture
 
-The trading bot is composed of several core modules:
+```mermaid
+graph TD
+    subgraph GrafanaCloud ["Grafana Cloud (Managed Monitoring)"]
+        Grafana[Grafana Dashboards] -->|Visualize Metrics| CloudProm[Prometheus Database]
+    end
 
-### 1. Authentication & Configuration (`auth/`, `config.py`)
-- **`config.py`**: Manages environment variables (Demo vs. Production), API keys, and RSA private key path configurations.
-- **`auth/kalshi_auth.py`**: Implements the required RSA-PSS cryptographic signatures to securely authenticate with Kalshi's V2 REST and WebSocket APIs.
+    subgraph DigitalOcean ["DigitalOcean Droplet (Cloud VPS)"]
+        Alloy[Grafana Alloy Daemon]
 
-### 2. Market Data & State Management (`data/`)
-- **`websocket_client.py`**: An asynchronous WebSocket client that maintains a persistent, authorized connection to Kalshi's V2 trade API, handling automatic reconnections and message routing.
-- **`orderbook_manager.py`**: Subscribes to L2 orderbook snapshots and deltas over the websocket to maintain a real-time, low-latency local view of the market bids and asks.
-- **`inventory_manager.py`**: Tracks your current USD balance and net contract positions. It hydrates the initial state via the REST API upon startup and updates in real-time by listening to websocket `fill` trade execution events.
+        subgraph DockerContainer ["Docker Container: kalshi-bot"]
+            BotLoop[Avellaneda-Stoikov Bot Loop]
+            OrderBook[Orderbook Manager]
+            InvManager[Inventory Manager]
+            OrderManager[Order Manager]
+            KillSwitch[Kill Switch]
+            Auth[RSA Cryptographic Auth]
+        end
+    end
 
-### 3. Execution & Safety (`execution/`)
-- **`order_manager.py`**: Handles placing and cancelling Limit orders asynchronously via Kalshi's REST API, while keeping a crucial local registry of active `client_order_id`s.
-- **`kill_switch.py`**: A vital risk-management safety feature. Capable of instantly cancelling all locally tracked active orders. It supports both asynchronous and synchronous emergency cancellation (e.g., if the bot crashes, is interrupted via `Ctrl+C`, or exceeds risk limits) to immediately drop market exposure.
+    subgraph External ["External Services"]
+        GHCR[GitHub Container Registry] -->|Deploy Image| DockerContainer
+        KalshiWS[Kalshi V2 WebSockets] <-->|Real-time Feed & Fills| OrderBook
+        KalshiWS <-->|Fills| InvManager
+        OrderManager -->|REST Order Placement/Cancel| KalshiREST[Kalshi V2 REST API]
+        KillSwitch -->|Emergency Cancel| KalshiREST
+    end
 
-### 4. Trading Strategy (`strategy/`)
-- **`market_maker.py`**: Implements a simplified **Avellaneda-Stoikov** algorithmic market-making strategy.
-  - Dynamically calculates a theoretical "Mid Price" based on the live orderbook.
-  - Evaluates your current contract inventory position to adjust a "Reservation Price" (your true target price) to reduce directional inventory risk, heavily influenced by an adjustable risk-aversion parameter (`gamma`).
-  - Continuously places and replaces Bid and Ask limit orders symmetrically around this Reservation Price to capture a minimum profit margin (`min_spread`).
+    %% Flow relationships inside the container
+    BotLoop -->|Evaluate Risk & Mid Price| OrderBook
+    BotLoop -->|Evaluate Exposure| InvManager
+    BotLoop -->|Send Quotes| OrderManager
+    BotLoop -.->|Interrupt / Safety Shutdown| KillSwitch
+    OrderManager -.->|Register Active IDs| KillSwitch
+    Auth -.->|Sign Requests| OrderManager
+    Auth -.->|Authorize Connection| KalshiWS
 
-## Testing Suite
+    %% Telemetry pipeline flows
+    Alloy -->|Scrape Metrics: Port 8000| BotLoop
+    Alloy -->|Push Metrics: Remote Write| CloudProm
 
-All tests are located in the `tests/` directory and are designed to validate specific subsystems of the architecture on the Kalshi Demo environment. 
+    %% Assign styles to subgraph containers
+    style GrafanaCloud fill:#172b22,stroke:#2d5a27,stroke-width:2px;
+    style DigitalOcean fill:#0f1d2e,stroke:#1f3c5c,stroke-width:2px;
+    style External fill:#1f132e,stroke:#3b205c,stroke-width:2px;
+    style DockerContainer fill:#142334,stroke:#264870,stroke-width:1px,stroke-dasharray: 5 5;
+```
 
-### `tests/test_ws_stream.py` (Data & Subscriptions)
-**Purpose**: Verifies that the core data ingestion pipeline and WebSocket subscriptions work.
-**Behavior**: Connects to Kalshi's WebSocket API, subscribes to the orderbook for a random active market, and simultaneously hits the REST API to hydrate your Demo portfolio balance. It spends 5 seconds listening to the live stream, outputting the continuous `Best Bid`, `Best Ask`, and your net position tracking.
+## Codebase Structure
 
-### `tests/test_execution.py` (Order Management)
-**Purpose**: Verifies that the bot can accurately place, track, and explicitly cancel orders via the REST API.
-**Behavior**: Successfully places a dummy limit order (1 "yes" contract) priced at 1 cent (deep out-of-the-money) on a random market. The `OrderManager` captures the local ID. After 3 seconds, it sends a REST API request to fully cancel that specific order, validating the round-trip execution capabilities.
+* `auth/` - Secure RSA-PSS signatures for API authentication (`kalshi_auth.py`).
+* `data/` - Real-time market feed, orderbook tracking, and position sync.
+* `execution/` - Order placement and emergency safety switch (`kill_switch.py`).
+* `strategy/` - Avellaneda-Stoikov pricing algorithm.
 
-### `tests/test_kill_switch.py` (Emergency Safety)
-**Purpose**: Validates the global safety mechanism designed to clear out risk exposure instantly in an emergency.
-**Behavior**: Places a 1-cent dummy limit order and registers it locally. The test script then simulates an unexpected software failure by programmatically invoking the async kill switch trigger. The Kill Switch immediately iterates over all tracked active orders and fires asynchronous cancellation API calls, ensuring the account is left flat.
 
-### `tests/test_strategy.py` (The Full Bot Loop)
-**Purpose**: A dry-run of the full, integrated market-making bot.
-**Behavior**: Selects an active market and successfully boots the `AvellanedaStoikovBot` class. The bot initializes the WebSocket, syncs its REST state, opens subscriptions, and begins its main quoting valuation loop. It is intentionally wired to listen for a manual keyboard interrupt (`Ctrl+C`). When triggered, it successfully fires the synchronous safety shut-down sequence—withdrawing all quotes—before cleanly exiting the process.
+## Configuration Parameters
+
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `KALSHI_ENV` | `string` | `demo` | Kalshi environment connection mode (`demo` or `prod`). |
+| `TARGET_TICKER` | `string` | - | The market ticker code to quote (e.g., `INX-26AUG-T5700`). |
+| `ORDER_SIZE` | `integer` | `1` | Number of contracts to trade per quote side. |
+| `MIN_SPREAD` | `integer` | `4` | The minimum profit margin spread (in cents) required to quote. |
+| `RISK_GAMMA` | `float` | `0.05` | Inventory risk aversion parameter. Higher values skew prices faster. |
+
+## Live Output Preview
+
+When running, the bot feeds live log output updating its quotes:
+
+```text
+[2026-08-02 22:45:12] INFO: Hydrated initial balance: $1,245.50 | Net Position: 0
+[2026-08-02 22:45:14] INFO: WebSocket Connected & Hydrated L2 Orderbook.
+[2026-08-02 22:45:15] INFO: Midpoint: 54c | Reservation Price: 54c | Spread: 4c
+[2026-08-02 22:45:15] INFO: Placing Quotes -> Bid: 52c (x1) | Ask: 56c (x1)
+[2026-08-02 22:45:18] INFO: Fill Event Received: Bought 1 YES at 52c. Position: +1 YES
+[2026-08-02 22:45:19] INFO: Skewing quotes due to +1 YES position. Res Price: 53.2c
+[2026-08-02 22:45:19] INFO: Replacing Quotes -> Bid: 51c (x1) | Ask: 55c (x1)
+```
+
+## Financial Disclaimer
+
+This project is for research purposes only. Algorithmic trading carries significant financial risk. Live trading configuration should only be attempted after thorough testing on the Demo environment. Use at your own risk. The authors are not responsible for any financial losses incurred.
