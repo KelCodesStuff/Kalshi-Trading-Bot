@@ -1,45 +1,60 @@
 # Deployment Guide
 
-This guide outlines the step-by-step process to verify that the Kalshi Trading Bot is successfully running on the DigitalOcean Droplet and that the local observability stack (Prometheus & Grafana) is correctly receiving its live metrics over the internet.
+This guide outlines the step-by-step process to verify that the Kalshi Trading Bot is successfully running on the DigitalOcean Droplet and that telemetry is correctly flowing through Grafana Alloy to your Grafana Cloud account.
 
 ## 1. Verify the Droplet (The Bot)
-If Grafana is showing "No Data", it is likely because the bot is currently turned off. We need to start it up on the server.
 
-1. **SSH into your droplet:** 
+The bot runs inside a background Docker container on your Droplet.
+
+1. **SSH into your droplet:**
    ```bash
    ssh root@<YOUR_DROPLET_IP>
    ```
-2. **Navigate to the deployment folder:** 
+2. **Navigate to the deployment folder:**
    ```bash
    cd ~/Kalshi-Trading-Bot
    ```
-3. **Check the bot status:** 
+3. **Check the bot status:**
    ```bash
    docker compose ps
    ```
-4. **View live logs:** 
+   *(Verify that the status is listed as "Up").*
+4. **View live execution logs:**
    ```bash
    docker compose logs -f bot
    ```
-5. **Restart the bot (if needed):** 
+5. **Restart the bot:**
    ```bash
    docker compose restart bot
    ```
-6. **Stop the bot:** 
+6. **Stop the bot:**
    ```bash
    docker compose down
    ```
 
-## 2. Verify Prometheus (The Database)
-Now that the bot is running on the Droplet, your local Prometheus database (running via Docker on your Mac) should be successfully scraping it over the internet every 2 seconds.
+## 2. Verify Grafana Alloy (The Telemetry Collector)
 
-1. Open your Mac's browser and go to: [http://localhost:9090/targets](http://localhost:9090/targets)
-2. You should see `kalshi-bot` listed there with the Droplet's IP address.
-3. The "State" badge should say **UP** in green. *(If it says DOWN, double-check that the bot hasn't crashed on the Droplet).*
+Grafana Alloy runs as a background service on the Droplet host system, scraping the bot's exposed port 8000 and pushing data to the cloud.
 
-## 3. Verify Grafana (The Dashboard)
-Finally, check the beautiful UI!
+1. **Check Alloy service status:**
+   ```bash
+   sudo systemctl status alloy
+   ```
+   *(Confirm it shows "active (running)" and the logs display "{^_^} Alloy is running").*
+2. **View recent Alloy logs:**
+   ```bash
+   journalctl -u alloy.service -n 50 --no-pager
+   ```
+   *(Verify there are no "authentication failed" or "non-recoverable error" messages).*
 
-1. Open your Mac's browser and go to: [http://localhost:3000](http://localhost:3000)
-2. Open your "Kalshi Market Maker" dashboard.
-3. Since the bot is actively running on the server, you should see the `bot_inventory_net_position` graph drawing live data points, the `orders_placed_total` counters climbing, and the latency histogram populating!
+## 3. Verify Grafana Cloud (The Dashboard)
+
+Once both the bot and Alloy services are running on the server, you can view the metrics dashboard from any device:
+
+1. Open your web browser and navigate to your Grafana instance (e.g., `https://<your_subdomain>.grafana.net`).
+2. Log into your account and open the **Kalshi Market Maker** dashboard.
+3. Confirm that the data series are actively plotting points for:
+   * **Profit & Loss**
+   * **Current Inventory Risk**
+   * **API Latency**
+   * **Total Orders Placed** (once the bot executes its first quote placements)
