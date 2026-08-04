@@ -11,6 +11,7 @@ setup(
         "python-dotenv",
         "cryptography",
         "certifi",
-        "prometheus_client"
+        "prometheus_client",
+        "psycopg2-binary"
     ]
 )
