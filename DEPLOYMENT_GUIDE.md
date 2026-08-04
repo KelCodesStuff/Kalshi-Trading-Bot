@@ -58,3 +58,30 @@ Once both the bot and Alloy services are running on the server, you can view the
    * **Current Inventory Risk**
    * **API Latency**
    * **Total Orders Placed** (once the bot executes its first quote placements)
+
+## 4. Verify the Database (PostgreSQL)
+
+You can inspect the database transaction history directly from the Droplet command line:
+
+1. **SSH into the Droplet and navigate to your folder:**
+   ```bash
+   cd ~/Kalshi-Trading-Bot
+   ```
+2. **Execute psql inside the database container:**
+   ```bash
+   docker compose exec db psql -U postgres -d kalshi_bot
+   ```
+3. **Query the orders table:**
+   * **List tables:**
+     ```sql
+     \dt
+     ```
+   * **View recent orders:**
+     ```sql
+     SELECT * FROM orders LIMIT 10;
+     ```
+   * **Exit psql:**
+     ```sql
+     \q
+     ```
+
