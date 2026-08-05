@@ -2,6 +2,13 @@
 
 This project is a fully-functional algorithmic market-making trading bot built for the Kalshi prediction market platform. Its primary goal is to provide dual-sided liquidity (bids and asks) on Kalshi markets to capture the bid-ask spread while actively managing inventory risk.
 
+## System Overview
+
+* **Compute:** Managed container execution via Docker and Docker Compose running on a 24/7 DigitalOcean Droplet.
+* **Database:** Relational order logs and execution history persisted via a PostgreSQL container.
+* **Observability:** Telemetry captured via Grafana Alloy and pushed to a hosted Grafana Cloud instance.
+* **Alerting:** Real-time error alerts and critical status updates broadcasted to Discord or Slack via webhooks.
+
 ## Quick Start
 
 1. **Clone and install dependencies:**
@@ -30,6 +37,7 @@ graph TD
 
     subgraph DigitalOcean ["DigitalOcean Droplet (Cloud VPS)"]
         Alloy[Grafana Alloy Daemon]
+        DBVolume[(Host Volume: postgres_data)]
 
         subgraph DockerContainer ["Docker Container: kalshi-bot"]
             BotLoop[Avellaneda-Stoikov Bot Loop]
@@ -38,6 +46,10 @@ graph TD
             OrderManager[Order Manager]
             KillSwitch[Kill Switch]
             Auth[RSA Cryptographic Auth]
+        end
+
+        subgraph DBContainer ["Docker Container: kalshi-bot-db"]
+            DB[(PostgreSQL Database)]
         end
     end
 
@@ -58,6 +70,11 @@ graph TD
     Auth -.->|Sign Requests| OrderManager
     Auth -.->|Authorize Connection| KalshiWS
 
+    %% Database transaction logging
+    OrderManager -->|Write Transaction Logs| DB
+    KillSwitch -->|Update Order Status| DB
+    DB -->|Persist Data| DBVolume
+
     %% Telemetry pipeline flows
     Alloy -->|Scrape Metrics: Port 8000| BotLoop
     Alloy -->|Push Metrics: Remote Write| CloudProm
@@ -67,6 +84,8 @@ graph TD
     style DigitalOcean fill:#0f1d2e,stroke:#1f3c5c,stroke-width:2px;
     style External fill:#1f132e,stroke:#3b205c,stroke-width:2px;
     style DockerContainer fill:#142334,stroke:#264870,stroke-width:1px,stroke-dasharray: 5 5;
+    style DBContainer fill:#142334,stroke:#264870,stroke-width:1px,stroke-dasharray: 5 5;
+    style DBVolume fill:#2c1913,stroke:#5c3520,stroke-width:1px;
 ```
 
 ## Codebase Structure
@@ -86,6 +105,12 @@ graph TD
 | `ORDER_SIZE` | `integer` | `1` | Number of contracts to trade per quote side. |
 | `MIN_SPREAD` | `integer` | `4` | The minimum profit margin spread (in cents) required to quote. |
 | `RISK_GAMMA` | `float` | `0.05` | Inventory risk aversion parameter. Higher values skew prices faster. |
+| `DB_HOST` | `string` | `localhost` | Hostaddress of the PostgreSQL database instance. |
+| `DB_PORT` | `integer` | `5432` | Port number of the PostgreSQL database. |
+| `DB_NAME` | `string` | `kalshi_bot` | Name of the database schema. |
+| `DB_USER` | `string` | `postgres` | Username for database authentication. |
+| `DB_PASSWORD` | `string` | `postgres` | Password for database authentication. |
+
 
 ## Live Output Preview
 
