@@ -1,12 +1,21 @@
-from config import BASE_URL
+"""
+Order Execution Manager
+
+This module processes order placements and cancellations via the Kalshi REST API. 
+It rate-limits REST requests to 10/s, records active quote states, and persists 
+all transaction records (order IDs, parameters, and statuses) in the PostgreSQL database.
+"""
+
+from config import BASE_URL, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 from auth.kalshi_auth import get_auth_headers
+from contextlib import closing
 
 import logging
 import requests
 import asyncio
 import uuid
 import certifi
-import sqlite3
+import psycopg2
 import datetime
 from typing import Dict, Any, List, Optional
 from utils.rate_limiter import RateLimiter
@@ -24,79 +33,100 @@ class OrderManager:
     Handles placing, replacing, and canceling discrete Limit orders via Kalshi REST API.
     Maintains a local lightweight record of active order IDs.
     """
-    def __init__(self, db_path: str = "orders.db"):
+    def __init__(self):
         # Maps client_order_id -> Order Dict
         self.active_orders: Dict[str, Dict[str, Any]] = {}
 
-        # Initialize SQLite database
-        self.db_path = db_path
+        # Initialize PostgreSQL database connection and schema
         self._init_db()
 
         # Kalshi Rate Limit: 10 requests per second
         self.rate_limiter = RateLimiter(rate=10, per=1.0)
 
-    def _init_db(self):
-        """Initializes the SQLite database table for order tracking."""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS orders (
-                    client_order_id TEXT PRIMARY KEY,
-                    kalshi_order_id TEXT,
-                    ticker TEXT,
-                    action TEXT,
-                    side TEXT,
-                    price INTEGER,
-                    count INTEGER,
-                    status TEXT,
-                    created_at TEXT,
-                    updated_at TEXT
+    def _get_connection(self):
+        """Helper to establish a PostgreSQL database connection with retry logic."""
+        import time
+        max_retries = 10
+        delay = 2
+        for attempt in range(max_retries):
+            try:
+                conn = psycopg2.connect(
+                    host=DB_HOST,
+                    port=DB_PORT,
+                    database=DB_NAME,
+                    user=DB_USER,
+                    password=DB_PASSWORD,
+                    connect_timeout=5
                 )
-            ''')
-            conn.commit()
+                return conn
+            except psycopg2.OperationalError as e:
+                if attempt == max_retries - 1:
+                    logger.critical(f"Database connection failed after {max_retries} attempts: {e}")
+                    raise
+                logger.warning(f"Database not ready yet (attempt {attempt+1}/{max_retries}). Retrying in {delay}s...")
+                time.sleep(delay)
+
+    def _init_db(self):
+        """Initializes the PostgreSQL database table for order tracking."""
+        with closing(self._get_connection()) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS orders (
+                        client_order_id VARCHAR(255) PRIMARY KEY,
+                        kalshi_order_id VARCHAR(255),
+                        ticker VARCHAR(255),
+                        action VARCHAR(255),
+                        side VARCHAR(255),
+                        price INTEGER,
+                        count INTEGER,
+                        status VARCHAR(255),
+                        created_at TIMESTAMPTZ,
+                        updated_at TIMESTAMPTZ
+                    )
+                ''')
+                conn.commit()
 
     def _update_db_order_status(self, client_order_id: str, status: str, kalshi_order_id: str = None, order_details: dict = None):
-        """Updates or inserts an order record into the SQLite database."""
-        now = datetime.datetime.utcnow().isoformat()
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            
-            # Check if order exists
-            cursor.execute("SELECT client_order_id FROM orders WHERE client_order_id = ?", (client_order_id,))
-            exists = cursor.fetchone()
-            
-            if exists:
-                if kalshi_order_id:
+        """Updates or inserts an order record into the PostgreSQL database."""
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        with closing(self._get_connection()) as conn:
+            with conn.cursor() as cursor:
+                # Check if order exists
+                cursor.execute("SELECT client_order_id FROM orders WHERE client_order_id = %s", (client_order_id,))
+                exists = cursor.fetchone()
+                
+                if exists:
+                    if kalshi_order_id:
+                        cursor.execute('''
+                            UPDATE orders 
+                            SET status = %s, kalshi_order_id = %s, updated_at = %s
+                            WHERE client_order_id = %s
+                        ''', (status, kalshi_order_id, now, client_order_id))
+                    else:
+                        cursor.execute('''
+                            UPDATE orders 
+                            SET status = %s, updated_at = %s
+                            WHERE client_order_id = %s
+                        ''', (status, now, client_order_id))
+                elif order_details:
                     cursor.execute('''
-                        UPDATE orders 
-                        SET status = ?, kalshi_order_id = ?, updated_at = ?
-                        WHERE client_order_id = ?
-                    ''', (status, kalshi_order_id, now, client_order_id))
-                else:
-                    cursor.execute('''
-                        UPDATE orders 
-                        SET status = ?, updated_at = ?
-                        WHERE client_order_id = ?
-                    ''', (status, now, client_order_id))
-            elif order_details:
-                cursor.execute('''
-                    INSERT INTO orders (
-                        client_order_id, kalshi_order_id, ticker, action, side, 
-                        price, count, status, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    client_order_id, 
-                    kalshi_order_id, 
-                    order_details.get("ticker"), 
-                    order_details.get("action"), 
-                    order_details.get("side"), 
-                    order_details.get("price"), 
-                    order_details.get("count"), 
-                    status, 
-                    now, 
-                    now
-                ))
-            conn.commit()
+                        INSERT INTO orders (
+                            client_order_id, kalshi_order_id, ticker, action, side, 
+                            price, count, status, created_at, updated_at
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ''', (
+                        client_order_id, 
+                        kalshi_order_id, 
+                        order_details.get("ticker"), 
+                        order_details.get("action"), 
+                        order_details.get("side"), 
+                        order_details.get("price"), 
+                        order_details.get("count"), 
+                        status, 
+                        now, 
+                        now
+                    ))
+                conn.commit()
 
     async def place_order(self, ticker: str, side: str, action: str, count: int, price: int) -> Optional[str]:
         """
