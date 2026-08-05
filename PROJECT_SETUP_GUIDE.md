@@ -78,7 +78,7 @@ SSH back into your Droplet to check that the container is running and to view th
    ```bash
    docker compose logs -f bot
    ```
-3. **Gracefully stop the bot (emergency kill-switch):**
+3. **Emergency kill-switch (cancel orders and exit):**
    ```bash
-   docker compose down
+   docker kill --signal=SIGINT kalshi-bot
    ```

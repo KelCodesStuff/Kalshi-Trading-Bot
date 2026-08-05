@@ -6,11 +6,11 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-kalshi_bot}
       POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
   bot:
     image: ghcr.io/kelcodesstuff/kalshi-trading-bot:latest
@@ -29,7 +29,7 @@ services:
       - DB_PORT=5432
       - DB_NAME=${DB_NAME:-kalshi_bot}
       - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD}
     # Mount the local private keys from the host directly into the container's working directory (/app)
     volumes:
       - ./kalshi_private_key_demo.pem:/app/kalshi_private_key_demo.pem:ro
