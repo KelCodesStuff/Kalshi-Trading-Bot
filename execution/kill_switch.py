@@ -66,7 +66,7 @@ class KillSwitch:
 
             logger.warning(f"Canceling {client_order_id} (Kalshi ID: {kalshi_order_id})...")
             # Fire an emergency blocking cancel to Kalshi using the raw request wrapper
-            sign_path = f"/trade-api/v2/portfolio/orders/{kalshi_order_id}"
+            sign_path = f"/trade-api/v2/portfolio/events/orders/{kalshi_order_id}"
             try:
                 headers = get_auth_headers(method="DELETE", sign_path=sign_path)
                 resp = requests.delete(
