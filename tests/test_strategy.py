@@ -41,14 +41,15 @@ async def main():
         order_size=ORDER_SIZE
     )
     
-    # 2. Wire Safety Kill Switch to manual Ctrl+C
+    # 2. Wire Safety Kill Switch to manual signals (Ctrl+C and termination signals)
     killer = KillSwitch(bot.om)
-    def handle_sigint(signum, frame):
-        print("\n\n>>> SIGINT. Manual Kill Switch Triggered <<<")
+    def handle_shutdown(signum, frame):
+        print(f"\n\n>>> Signal {signum} received. Safety Kill Switch Triggered <<<")
         # Instantly scrub local execution layer 
         killer.trigger_synchronous()
         sys.exit(0)
-    signal.signal(signal.SIGINT, handle_sigint)
+    signal.signal(signal.SIGINT, handle_shutdown)
+    signal.signal(signal.SIGTERM, handle_shutdown)
     
     # 3. Start Market Maker Loop
     try:

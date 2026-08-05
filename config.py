@@ -37,3 +37,11 @@ RISK_GAMMA = float(os.getenv("RISK_GAMMA", "0.5"))
 MIN_SPREAD = int(os.getenv("MIN_SPREAD", "4"))
 ORDER_SIZE = int(os.getenv("ORDER_SIZE", "1"))
 TARGET_TICKER = os.getenv("TARGET_TICKER", "") # Can be injected to force a specific market
+
+# Database Configurations (PostgreSQL)
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = int(os.getenv("DB_PORT", "5432"))
+DB_NAME = os.getenv("DB_NAME", "kalshi_bot")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
+
