@@ -32,7 +32,7 @@ def mock_request_handler(method, url, *args, **kwargs):
         return MockResponse({"balance": 10000}, 200)
     elif "portfolio/positions" in url:
         return MockResponse({"market_positions": []}, 200)
-    elif "portfolio/orders" in url:
+    elif "portfolio/orders" in url or "portfolio/events/orders" in url:
         if method == "POST":
             return MockResponse({"order": {"order_id": "mock-order-id-123", "status": "executed"}}, 201)
         elif method == "DELETE":
