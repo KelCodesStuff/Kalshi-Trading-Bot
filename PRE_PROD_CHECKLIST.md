@@ -6,7 +6,7 @@ This guide outlines the essential steps and milestones you must achieve before m
 *Goal: Prove the bot is mechanically stable and safe from catastrophic failures.*
 
 - [ ] **Zero Crashes:** The bot must run continuously on the DigitalOcean Droplet for at least 7 consecutive days without the Python process crashing or running out of memory.
-- [ ] **Zero Orphaned Orders:** Manually trigger the Kill Switch (run `docker compose down` on the Droplet) during an active trading session. Verify via the Kalshi UI that absolutely zero open orders were left behind.
+- [ ] **Zero Orphaned Orders:** Manually trigger the Kill Switch (run `docker kill --signal=SIGINT kalshi-bot` on the Droplet) during an active trading session. Verify via the Kalshi UI that absolutely zero open orders were left behind.
 - [ ] **State Recovery Verification:** Simulate a sudden container failure by running `docker kill kalshi-bot` to forcefully terminate the process. Restart the bot and verify its initialization sequence correctly finds and cancels the old resting orders before quoting again.
 - [ ] **Clean Rate Limits:** Monitor your Grafana dashboard. The `order_errors_total` panel should remain at `0`. If you consistently hit `429 Too Many Requests`, your algorithm is too aggressive and must be tuned down before Production.
 - [ ] **Connection Stability:** Ensure the websocket connection successfully auto-reconnects and re-hydrates state if Kalshi drops the connection.

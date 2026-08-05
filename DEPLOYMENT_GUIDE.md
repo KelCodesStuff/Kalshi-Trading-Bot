@@ -69,7 +69,7 @@ You can inspect the database transaction history directly from the Droplet comma
    ```
 2. **Execute psql inside the database container:**
    ```bash
-   docker compose exec db psql -U postgres -d kalshi_bot
+   docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
    ```
 3. **Query the orders table:**
    * **List tables:**
