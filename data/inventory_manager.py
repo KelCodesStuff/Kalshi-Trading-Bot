@@ -1,3 +1,11 @@
+"""
+Inventory and Balance Manager
+
+This module tracks USD balance and contract positions in real-time. It initialises 
+the state via REST API hydration and maintains it by listening to WebSocket fill events. 
+It also runs a background reconciliation loop to prevent state drift.
+"""
+
 import logging
 import requests
 import asyncio

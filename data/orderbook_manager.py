@@ -1,3 +1,11 @@
+"""
+Orderbook Manager
+
+This module tracks and maintains the real-time L2 order book (bids and asks) 
+for the selected prediction markets. It processes full orderbook snapshots 
+and incremental delta updates received from the Kalshi WebSocket feeds.
+"""
+
 import logging
 from typing import Dict, Any, Optional
 

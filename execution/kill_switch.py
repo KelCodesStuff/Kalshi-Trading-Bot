@@ -1,3 +1,11 @@
+"""
+Emergency Safety Kill Switch
+
+This module provides emergency procedures to immediately cancel all resting orders 
+and cease market making. It supports both asynchronous cancellation in the event 
+of software crashes and synchronous cancellation for manual developer triggers (like Ctrl+C).
+"""
+
 import logging
 import asyncio
 import requests
