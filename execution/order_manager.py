@@ -1,5 +1,6 @@
 from config import BASE_URL, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 from auth.kalshi_auth import get_auth_headers
+from contextlib import closing
 
 import logging
 import requests
@@ -59,7 +60,7 @@ class OrderManager:
 
     def _init_db(self):
         """Initializes the PostgreSQL database table for order tracking."""
-        with self._get_connection() as conn:
+        with closing(self._get_connection()) as conn:
             with conn.cursor() as cursor:
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS orders (
@@ -80,7 +81,7 @@ class OrderManager:
     def _update_db_order_status(self, client_order_id: str, status: str, kalshi_order_id: str = None, order_details: dict = None):
         """Updates or inserts an order record into the PostgreSQL database."""
         now = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        with self._get_connection() as conn:
+        with closing(self._get_connection()) as conn:
             with conn.cursor() as cursor:
                 # Check if order exists
                 cursor.execute("SELECT client_order_id FROM orders WHERE client_order_id = %s", (client_order_id,))
