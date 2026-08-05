@@ -79,7 +79,7 @@ class OrderManager:
 
     def _update_db_order_status(self, client_order_id: str, status: str, kalshi_order_id: str = None, order_details: dict = None):
         """Updates or inserts an order record into the PostgreSQL database."""
-        now = datetime.datetime.utcnow().isoformat()
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 # Check if order exists
