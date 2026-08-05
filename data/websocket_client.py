@@ -1,3 +1,11 @@
+"""
+Kalshi WebSocket Client
+
+This module establishes and manages a persistent connection to the Kalshi V2 WebSocket 
+interface. It handles automatic reconnection with exponential backoff, signs connection 
+requests using RSA keys, routes messages to handlers, and manages market subscriptions.
+"""
+
 import asyncio
 import json
 import logging

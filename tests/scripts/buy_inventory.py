@@ -1,3 +1,11 @@
+"""
+Inventory Acquisition Utility Script
+
+This helper utility script is designed to rapidly build up inventory for testing. 
+It places a configured number of individual 1-contract YES buy orders at 99 cents 
+to cross the spread immediately and guarantee quick fills.
+"""
+
 import asyncio
 from execution.order_manager import OrderManager
 import sys

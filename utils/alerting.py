@@ -1,3 +1,11 @@
+"""
+Alerting Utility
+
+This module manages error notifications. It broadcasts high-priority alerts to 
+Slack/Discord webhook URLs in case of connection dropouts, critical errors, 
+or safety triggers. It falls back to standard log files if no webhook is set.
+"""
+
 import asyncio
 import logging
 import json

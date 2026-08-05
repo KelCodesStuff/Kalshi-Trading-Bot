@@ -43,10 +43,10 @@ class OrderManager:
         # Kalshi Rate Limit: 10 requests per second
         self.rate_limiter = RateLimiter(rate=10, per=1.0)
 
-    def _get_connection(self):
-        """Helper to establish a PostgreSQL database connection with retry logic."""
+    def _get_connection(self, allow_retries: bool = False):
+        """Helper to establish a PostgreSQL database connection with optional retry logic."""
         import time
-        max_retries = 10
+        max_retries = 10 if allow_retries else 1
         delay = 2
         for attempt in range(max_retries):
             try:
@@ -61,14 +61,17 @@ class OrderManager:
                 return conn
             except psycopg2.OperationalError as e:
                 if attempt == max_retries - 1:
-                    logger.critical(f"Database connection failed after {max_retries} attempts: {e}")
+                    if allow_retries:
+                        logger.critical(f"Database connection failed after {max_retries} attempts: {e}")
+                    else:
+                        logger.error(f"Database connection failed: {e}")
                     raise
                 logger.warning(f"Database not ready yet (attempt {attempt+1}/{max_retries}). Retrying in {delay}s...")
                 time.sleep(delay)
 
     def _init_db(self):
         """Initializes the PostgreSQL database table for order tracking."""
-        with closing(self._get_connection()) as conn:
+        with closing(self._get_connection(allow_retries=True)) as conn:
             with conn.cursor() as cursor:
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS orders (
@@ -87,46 +90,49 @@ class OrderManager:
                 conn.commit()
 
     def _update_db_order_status(self, client_order_id: str, status: str, kalshi_order_id: str = None, order_details: dict = None):
-        """Updates or inserts an order record into the PostgreSQL database."""
+        """Updates or inserts an order record into the PostgreSQL database. Fails fast without blocking."""
         now = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        with closing(self._get_connection()) as conn:
-            with conn.cursor() as cursor:
-                # Check if order exists
-                cursor.execute("SELECT client_order_id FROM orders WHERE client_order_id = %s", (client_order_id,))
-                exists = cursor.fetchone()
-                
-                if exists:
-                    if kalshi_order_id:
+        try:
+            with closing(self._get_connection(allow_retries=False)) as conn:
+                with conn.cursor() as cursor:
+                    # Check if order exists
+                    cursor.execute("SELECT client_order_id FROM orders WHERE client_order_id = %s", (client_order_id,))
+                    exists = cursor.fetchone()
+                    
+                    if exists:
+                        if kalshi_order_id:
+                            cursor.execute('''
+                                UPDATE orders 
+                                SET status = %s, kalshi_order_id = %s, updated_at = %s
+                                WHERE client_order_id = %s
+                            ''', (status, kalshi_order_id, now, client_order_id))
+                        else:
+                            cursor.execute('''
+                                UPDATE orders 
+                                SET status = %s, updated_at = %s
+                                WHERE client_order_id = %s
+                            ''', (status, now, client_order_id))
+                    elif order_details:
                         cursor.execute('''
-                            UPDATE orders 
-                            SET status = %s, kalshi_order_id = %s, updated_at = %s
-                            WHERE client_order_id = %s
-                        ''', (status, kalshi_order_id, now, client_order_id))
-                    else:
-                        cursor.execute('''
-                            UPDATE orders 
-                            SET status = %s, updated_at = %s
-                            WHERE client_order_id = %s
-                        ''', (status, now, client_order_id))
-                elif order_details:
-                    cursor.execute('''
-                        INSERT INTO orders (
-                            client_order_id, kalshi_order_id, ticker, action, side, 
-                            price, count, status, created_at, updated_at
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ''', (
-                        client_order_id, 
-                        kalshi_order_id, 
-                        order_details.get("ticker"), 
-                        order_details.get("action"), 
-                        order_details.get("side"), 
-                        order_details.get("price"), 
-                        order_details.get("count"), 
-                        status, 
-                        now, 
-                        now
-                    ))
-                conn.commit()
+                            INSERT INTO orders (
+                                client_order_id, kalshi_order_id, ticker, action, side, 
+                                price, count, status, created_at, updated_at
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ''', (
+                            client_order_id, 
+                            kalshi_order_id, 
+                            order_details.get("ticker"), 
+                            order_details.get("action"), 
+                            order_details.get("side"), 
+                            order_details.get("price"), 
+                            order_details.get("count"), 
+                            status, 
+                            now, 
+                            now
+                        ))
+                    conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to write order status to database (client_id: {client_order_id}, status: {status}): {e}")
 
     async def place_order(self, ticker: str, side: str, action: str, count: int, price: int) -> Optional[str]:
         """

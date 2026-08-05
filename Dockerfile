@@ -31,4 +31,4 @@ RUN pip install .
 EXPOSE 8000
 
 # Run the strategy by default
-ENTRYPOINT ["python", "tests/test_strategy.py"]
+ENTRYPOINT ["python", "main.py"]

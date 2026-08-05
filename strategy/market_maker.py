@@ -1,3 +1,11 @@
+"""
+Avellaneda-Stoikov Market Maker Strategy
+
+This is the main algorithm module that calculates the reservation prices and bid/ask quotes 
+for prediction markets. It skews prices according to current inventory risk (long/short YES) 
+and places dual-sided quotes around the reservation price to earn the bid-ask spread.
+"""
+
 import asyncio
 import logging
 import time

@@ -1,4 +1,10 @@
-# kalshi_auth.py
+"""
+Kalshi API Authentication Helper
+
+This module handles cryptographic signature generation for authentication with Kalshi's V2 API. 
+It loads the private RSA key (.pem file) and generates the required headers (including the timestamp, 
+API key, and RSA-PSS signature) for each REST and WebSocket request.
+"""
 
 # Import standard libraries for encoding, time management, and path resolution
 import base64
