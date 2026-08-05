@@ -152,14 +152,10 @@ class OrderManager:
             "type": "limit",
             "ticker": ticker,
             "client_order_id": client_order_id,
-            "yes_price": price if side == "yes" else None,
-            "no_price": price if side == "no" else None
+            "price": f"{price / 100:.2f}"
         }
         
-        # Remove null values to avoid API schema errors
-        payload = {k: v for k, v in payload.items() if v is not None}
-        
-        sign_path = "/trade-api/v2/portfolio/orders"
+        sign_path = "/trade-api/v2/portfolio/events/orders"
         
         max_retries = 3
         base_delay = 1.0
@@ -229,7 +225,7 @@ class OrderManager:
             # Fallback (Kalshi V2 usually expects `order_id` in the URL path)
             order_id = client_order_id
             
-        sign_path = f"/trade-api/v2/portfolio/orders/{order_id}"
+        sign_path = f"/trade-api/v2/portfolio/events/orders/{order_id}"
         
         max_retries = 3
         base_delay = 1.0
@@ -299,7 +295,7 @@ class OrderManager:
         """Synchronous wrapper for DELETE requests"""
         try:
             headers = get_auth_headers(method="DELETE", sign_path=sign_path)
-            with measure_latency("DELETE", "/trade-api/v2/portfolio/orders"):
+            with measure_latency("DELETE", "/trade-api/v2/portfolio/events/orders"):
                 return requests.delete(
                     BASE_URL + sign_path,
                     headers=headers,
@@ -312,7 +308,7 @@ class OrderManager:
 
     async def _cancel_by_kalshi_id(self, order_id: str, client_order_id: Optional[str]):
         """Helper method to cancel an order directly by Kalshi order ID (used during recovery)."""
-        cancel_path = f"/trade-api/v2/portfolio/orders/{order_id}"
+        cancel_path = f"/trade-api/v2/portfolio/events/orders/{order_id}"
         resp = await asyncio.to_thread(self._delete_request, cancel_path)
         if resp and resp.status_code in [200, 204]:
             logger.info(f"Successfully cancelled orphaned order {cancel_path}")
