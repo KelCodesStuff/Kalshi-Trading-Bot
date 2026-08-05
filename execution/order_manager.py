@@ -1,3 +1,11 @@
+"""
+Order Execution Manager
+
+This module processes order placements and cancellations via the Kalshi REST API. 
+It rate-limits REST requests to 10/s, records active quote states, and persists 
+all transaction records (order IDs, parameters, and statuses) in the PostgreSQL database.
+"""
+
 from config import BASE_URL, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 from auth.kalshi_auth import get_auth_headers
 from contextlib import closing
@@ -72,8 +80,8 @@ class OrderManager:
                         price INTEGER,
                         count INTEGER,
                         status VARCHAR(255),
-                        created_at VARCHAR(255),
-                        updated_at VARCHAR(255)
+                        created_at TIMESTAMPTZ,
+                        updated_at TIMESTAMPTZ
                     )
                 ''')
                 conn.commit()

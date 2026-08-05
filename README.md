@@ -9,24 +9,6 @@ This project is a fully-functional algorithmic market-making trading bot built f
 * **Observability:** Telemetry captured via Grafana Alloy and pushed to a hosted Grafana Cloud instance.
 * **Alerting:** Real-time error alerts and critical status updates broadcasted to Discord or Slack via webhooks.
 
-## Quick Start
-
-1. **Clone and install dependencies:**
-   ```bash
-   git clone https://github.com/KelCodesStuff/Kalshi-Trading-Bot.git
-   cd Kalshi-Trading-Bot
-   pip install .
-   ```
-2. **Configure environment:**
-   ```bash
-   cp .env.example .env
-   # Add your Kalshi Demo API credentials and RSA key paths to .env
-   ```
-3. **Run the bot loop:**
-   ```bash
-   python main.py
-   ```
-
 ## System Architecture
 
 ```mermaid
@@ -88,14 +70,6 @@ graph TD
     style DBVolume fill:#2c1913,stroke:#5c3520,stroke-width:1px;
 ```
 
-## Codebase Structure
-
-* `auth/` - Secure RSA-PSS signatures for API authentication (`kalshi_auth.py`).
-* `data/` - Real-time market feed, orderbook tracking, and position sync.
-* `execution/` - Order placement and emergency safety switch (`kill_switch.py`).
-* `strategy/` - Avellaneda-Stoikov pricing algorithm.
-
-
 ## Configuration Parameters
 
 | Parameter | Type | Default | Description |
@@ -105,7 +79,7 @@ graph TD
 | `ORDER_SIZE` | `integer` | `1` | Number of contracts to trade per quote side. |
 | `MIN_SPREAD` | `integer` | `4` | The minimum profit margin spread (in cents) required to quote. |
 | `RISK_GAMMA` | `float` | `0.05` | Inventory risk aversion parameter. Higher values skew prices faster. |
-| `DB_HOST` | `string` | `localhost` | Hostaddress of the PostgreSQL database instance. |
+| `DB_HOST` | `string` | `localhost` | Host address of the PostgreSQL database instance. |
 | `DB_PORT` | `integer` | `5432` | Port number of the PostgreSQL database. |
 | `DB_NAME` | `string` | `kalshi_bot` | Name of the database schema. |
 | `DB_USER` | `string` | `postgres` | Username for database authentication. |
