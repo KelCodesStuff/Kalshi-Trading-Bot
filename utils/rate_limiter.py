@@ -1,3 +1,11 @@
+"""
+Asynchronous Token Bucket Rate Limiter
+
+This module implements a token bucket algorithm to throttle REST client calls. 
+It ensures compliance with Kalshi API limit constraints (e.g. max 10 requests per second) 
+by pausing execution tasks when tokens are exhausted.
+"""
+
 import asyncio
 import time
 import logging

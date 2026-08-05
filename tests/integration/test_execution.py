@@ -1,3 +1,12 @@
+"""
+Order Lifecycle Integration Test
+
+This test verifies basic REST order placements and cancellations. It fetches a list of 
+active markets, selects a random market, places a 1-cent limit order (to prevent 
+accidental fills), waits 3 seconds, and then cancels the order to verify the full 
+execution lifecycle.
+"""
+
 import asyncio
 import os
 

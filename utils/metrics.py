@@ -1,3 +1,11 @@
+"""
+Prometheus Metrics Exporter
+
+This module exposes real-time performance and financial telemetry for scrape collections. 
+It defines Gauge, Histogram, and Counter metrics tracking execution latency, 
+inventory positions, balance, placed orders, and API errors.
+"""
+
 import time
 from prometheus_client import start_http_server, Gauge, Histogram, Counter
 import logging

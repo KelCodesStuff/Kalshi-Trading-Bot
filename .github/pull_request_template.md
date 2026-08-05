@@ -1,6 +1,4 @@
 ## Description
-- **What**: 
-- **Why**: 
 
 ## Related Issue
 
@@ -10,8 +8,6 @@
 - [ ] Breaking change
 - [ ] DevOps / Infrastructure / CI
 - [ ] Documentation update
-
-## Testing Instructions
 
 ## PR Checklist
 - [ ] I have performed a self-review of my own code.
