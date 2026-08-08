@@ -129,6 +129,10 @@ jobs:
           command_timeout: 10m
           script: |
             cd /root/Kalshi-Trading-Bot
+            # Install Doppler CLI if not already present
+            if ! command -v doppler &> /dev/null; then
+              curl -Ls --tlsv1.2 --proto "=https" --retry 3 https://cli.doppler.com/install.sh | sudo sh
+            fi
             # Ensure Docker logs into GHCR to pull the private image
             echo "${{ secrets.PAT_GHCR }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             # Pull the latest image
